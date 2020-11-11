@@ -1,7 +1,12 @@
+import java.awt.Button;
+import java.awt.TextArea;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.util.Properties;
+
+import javafx.application.Application;
+import javafx.stage.Stage;
 
 import javax.jms.JMSException;
 import javax.jms.Message;
@@ -17,48 +22,100 @@ import javax.naming.Context;
 import javax.naming.InitialContext;
 import javax.naming.NamingException;
 
-public class Chat implements javax.jms.MessageListener {
+public class Chat extends Application implements javax.jms.MessageListener 
+{
 	
 	static String username;
 	public static final String TOPIC = "topic/Chat";
+	
+	Stage window;
+	Scene chatScene;
 
-	public static void main(String[] args) throws JMSException, IOException, NamingException {
+	/* Text colors */
+	public static final String ANSI_RESET = "\033[0m";
+	public static final String ANSI_BLACK = "\u001B[30m";
+	public static final String ANSI_RED = "\033[0;31m";
+	public static final String ANSI_GREEN = "\u001B[32m";
+	public static final String ANSI_YELLOW = "\033[0;33m";
+	public static final String ANSI_BLUE = "\u001B[34m";
+	public static final String ANSI_PURPLE = "\u001B[35m";
+	public static final String ANSI_CYAN = "\u001B[36m";
+	public static final String ANSI_WHITE = "\u001B[37m";
+	
+	Topic mTopic;
+	TopicConnection mTopicConnection;
+
+	public static void main(String[] args) throws
+	JMSException, IOException, NamingException
+	{
 		username = args[0];
-		Chat chat = new Chat();
-		Context initialContext = Chat.getInitialContext();
-		Topic topic = (Topic)initialContext.lookup(Chat.TOPIC);
-		TopicConnectionFactory topicConnectionFactory = (TopicConnectionFactory)initialContext.lookup("ConnectionFactory");
-		TopicConnection topicConnection = topicConnectionFactory.createTopicConnection();
-		chat.subscribe(topicConnection, topic, chat);
-		chat.publish(topicConnection, topic, username);
+		initChat();
 	}
 	
-	public void subscribe(TopicConnection topicConnection, Topic topic, Chat chat) throws JMSException {
-		TopicSession subscribeSession = topicConnection.createTopicSession(false, Session.AUTO_ACKNOWLEDGE);
-		TopicSubscriber topicSubscriper = subscribeSession.createSubscriber(topic);
+	private static void initChat()
+	{
+		Chat chat = new Chat();
+		Context initialContext = Chat.getInitialContext();
+		mTopic = (Topic)initialContext.lookup(Chat.TOPIC);
+		TopicConnectionFactory topicConnectionFactory = (TopicConnectionFactory)
+				initialContext.lookup("ConnectionFactory");
+		mTopicConnection =
+				topicConnectionFactory.createTopicConnection();
+		chat.subscribe(mTopicConnection, mTopic, chat);
+		chat.publish(mTopicConnection, mTopic, username);
+	}
+
+	public void subscribe(TopicConnection topicConnection, Topic topic, Chat chat)
+			throws JMSException
+	{
+		TopicSession subscribeSession = topicConnection
+				.createTopicSession(false, Session.AUTO_ACKNOWLEDGE);
+		TopicSubscriber topicSubscriper = subscribeSession
+				.createSubscriber(topic);
 		topicSubscriper.setMessageListener(chat);
 	}
 	
-	public void publish(TopicConnection topicConnection, Topic topic, String username) throws JMSException, IOException {
-		TopicSession publishSession = topicConnection.createTopicSession(false, Session.AUTO_ACKNOWLEDGE);
-		TopicPublisher topicPublisher = publishSession.createPublisher(topic);
+	public void publish(TopicConnection topicConnection, Topic topic, String username)
+			throws JMSException, IOException
+	{
+		TopicSession publishSession = topicConnection
+				.createTopicSession(false, Session.AUTO_ACKNOWLEDGE);
+		TopicPublisher topicPublisher = publishSession
+				.createPublisher(topic);
 		topicConnection.start();
-		BufferedReader reader = new java.io.BufferedReader(new InputStreamReader(System.in));
+		BufferedReader reader = new java.io.BufferedReader
+				(new InputStreamReader(System.in));
+
+		System.out.println(ANSI_YELLOW + "    " + username + " joined the chat!" + ANSI_RESET);
+		sendMessage(ANSI_YELLOW + "    " + username + " joined the chat!" + ANSI_RESET
+				,publishSession,topicPublisher);
 		
 		while (true) {
 			String messageToSend = reader.readLine();
 			if (messageToSend.equals("exit")) {
+				System.out.println(ANSI_RED + "    " + username + " left the chat!" + ANSI_RESET);
+				sendMessage(ANSI_RED + "    " + username + " left the chat!" + ANSI_RESET
+						,publishSession,topicPublisher);
 				topicConnection.close();
 				System.exit(0);
 			} else {
-				TextMessage message = publishSession.createTextMessage();
-				message.setText("    " + username + ": " + messageToSend);
-				topicPublisher.publish(message);
+				sendMessage("     " + username + ":  " + messageToSend
+						,publishSession,topicPublisher);
 			}
 		}
 	}
 	
-	public static Context getInitialContext() throws JMSException, NamingException {
+	public void sendMessage(String sMessage, TopicSession publishSession, TopicPublisher topicPublisher)
+			throws JMSException
+	{
+		TextMessage message = publishSession.createTextMessage();
+		message.setText(sMessage);
+		topicPublisher.publish(message);
+	}
+	
+	public static Context getInitialContext()
+			throws JMSException, NamingException
+	{
 		Properties props = new Properties();
 		props.put(Context.INITIAL_CONTEXT_FACTORY, "org.jnp.interfaces.NamingContextFactory");
 		props.put(Context.URL_PKG_PREFIXES, "org.jboss.ejb.client.naming");
@@ -68,9 +125,30 @@ public class Chat implements javax.jms.MessageListener {
 	}
 
 	@Override
-	public void onMessage(Message message) {
+	public void onMessage(Message message)
+	{
 		// When we get a message
-		System.out.println((TextMessage)message);
+		try
+		{
+			System.out.println(((TextMessage)message).getText());
+		} catch (JMSException e)
+		{
+			e.printStackTrace();
+		}
+	}
+
+	@Override
+	public void start(Stage stage) throws Exception
+	{
+		// TODO Auto-generated method stub
+		window = stage;
+		
+		//Label label = new Label("Send message");
+		Button button = new Button("Send");
+		TextArea messageArea = new TextArea("Your message..");
+		messageArea.setFocusable(true);
+		button.setOnAction(e -> {publish(mTopicConnection, mTopic, messageArea)});
+		
 	}
 
 }
