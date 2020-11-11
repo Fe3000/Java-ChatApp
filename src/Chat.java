@@ -6,6 +6,7 @@ import java.io.InputStreamReader;
 import java.util.Properties;
 
 import javafx.application.Application;
+import javafx.scene.Scene;
 import javafx.stage.Stage;
 
 import javax.jms.JMSException;
@@ -42,17 +43,19 @@ public class Chat extends Application implements javax.jms.MessageListener
 	public static final String ANSI_CYAN = "\u001B[36m";
 	public static final String ANSI_WHITE = "\u001B[37m";
 	
-	Topic mTopic;
-	TopicConnection mTopicConnection;
+	static Topic mTopic;
+	static TopicConnection mTopicConnection;
 
 	public static void main(String[] args) throws
 	JMSException, IOException, NamingException
 	{
+		launch(args);
 		username = args[0];
 		initChat();
 	}
 	
 	private static void initChat()
+			throws JMSException, NamingException, IOException
 	{
 		Chat chat = new Chat();
 		Context initialContext = Chat.getInitialContext();
@@ -142,12 +145,21 @@ public class Chat extends Application implements javax.jms.MessageListener
 	{
 		// TODO Auto-generated method stub
 		window = stage;
+		stage.setTitle("GroundE");
 		
 		//Label label = new Label("Send message");
-		Button button = new Button("Send");
+		javafx.scene.control.Button button = new javafx.scene.control.Button("Send");
 		TextArea messageArea = new TextArea("Your message..");
 		messageArea.setFocusable(true);
-		button.setOnAction(e -> {publish(mTopicConnection, mTopic, messageArea)});
+		
+		button.setOnAction(e -> {
+				String message = messageArea.getText();
+				try {
+					publish(mTopicConnection, mTopic, message);
+				} catch (JMSException | IOException e1) {
+					e1.printStackTrace();
+				}
+			});
 		
 	}
 
