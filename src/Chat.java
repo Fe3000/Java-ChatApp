@@ -1,12 +1,16 @@
-import java.awt.Button;
-import java.awt.TextArea;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.util.Properties;
 
 import javafx.application.Application;
+import javafx.concurrent.Task;
 import javafx.scene.Scene;
+import javafx.scene.control.Button;
+import javafx.scene.control.TextArea;
+import javafx.scene.layout.AnchorPane;
+import javafx.scene.layout.Priority;
+import javafx.scene.layout.VBox;
 import javafx.stage.Stage;
 
 import javax.jms.JMSException;
@@ -31,6 +35,7 @@ public class Chat extends Application implements javax.jms.MessageListener
 	
 	Stage window;
 	Scene chatScene;
+	Button sendButton;
 
 	/* Text colors */
 	public static final String ANSI_RESET = "\033[0m";
@@ -51,7 +56,7 @@ public class Chat extends Application implements javax.jms.MessageListener
 	{
 		launch(args);
 		username = args[0];
-		initChat();
+		initChat(); // TODO add a Thread to run this while the GUI is active.
 	}
 	
 	private static void initChat()
@@ -64,6 +69,7 @@ public class Chat extends Application implements javax.jms.MessageListener
 				initialContext.lookup("ConnectionFactory");
 		mTopicConnection =
 				topicConnectionFactory.createTopicConnection();
+		System.out.println("Ready for chat");
 		chat.subscribe(mTopicConnection, mTopic, chat);
 		chat.publish(mTopicConnection, mTopic, username);
 	}
@@ -143,16 +149,21 @@ public class Chat extends Application implements javax.jms.MessageListener
 	@Override
 	public void start(Stage stage) throws Exception
 	{
-		// TODO Auto-generated method stub
+		// Set up chat window
 		window = stage;
-		stage.setTitle("GroundE");
+		window.setTitle("GroundE");
+		VBox root = new VBox(5);
+		
+		System.out.println("Setting up window");
 		
 		//Label label = new Label("Send message");
-		javafx.scene.control.Button button = new javafx.scene.control.Button("Send");
+		sendButton = new Button("Send");
 		TextArea messageArea = new TextArea("Your message..");
-		messageArea.setFocusable(true);
 		
-		button.setOnAction(e -> {
+		TextArea chatArea = new TextArea();
+		VBox.setVgrow(chatArea, Priority.ALWAYS);
+		
+		sendButton.setOnAction(e -> {
 				String message = messageArea.getText();
 				try {
 					publish(mTopicConnection, mTopic, message);
@@ -161,6 +172,17 @@ public class Chat extends Application implements javax.jms.MessageListener
 				}
 			});
 		
+		
+		AnchorPane bottomRow = new AnchorPane();
+        AnchorPane.setLeftAnchor(messageArea, 0.0);
+        AnchorPane.setRightAnchor(sendButton, 0.0);
+        bottomRow.getChildren().addAll(messageArea, sendButton);
+		
+		root.getChildren().addAll(chatArea, bottomRow);
+		Scene scene = new Scene(root);
+		
+		window.setScene(scene);
+		window.show();
 	}
 
 }
