@@ -13,6 +13,7 @@ import javafx.scene.layout.AnchorPane;
 import javafx.scene.layout.Priority;
 import javafx.scene.layout.VBox;
 import javafx.stage.Stage;
+import metadata.Appdata;
 
 import javax.jms.JMSException;
 import javax.jms.Message;
@@ -31,23 +32,9 @@ import javax.naming.NamingException;
 public class Chat extends Application implements javax.jms.MessageListener 
 {
 	
-	static String username;
-	public static final String TOPIC = "topic/Chat";
-	
 	Stage window;
 	Scene chatScene;
 	Button sendButton;
-
-	/* Text colors */
-	public static final String ANSI_RESET = "\033[0m";
-	public static final String ANSI_BLACK = "\u001B[30m";
-	public static final String ANSI_RED = "\033[0;31m";
-	public static final String ANSI_GREEN = "\u001B[32m";
-	public static final String ANSI_YELLOW = "\033[0;33m";
-	public static final String ANSI_BLUE = "\u001B[34m";
-	public static final String ANSI_PURPLE = "\u001B[35m";
-	public static final String ANSI_CYAN = "\u001B[36m";
-	public static final String ANSI_WHITE = "\u001B[37m";
 	
 	private Service<Void> backgroundTread;
 	
@@ -58,7 +45,7 @@ public class Chat extends Application implements javax.jms.MessageListener
 	JMSException, IOException, NamingException
 	{
 		launch(args);
-		username = args[0];
+		Appdata.username = args[0];
 		initChat();
 	}
 	
@@ -67,14 +54,14 @@ public class Chat extends Application implements javax.jms.MessageListener
 	{
 		Chat chat = new Chat();
 		Context initialContext = Chat.getInitialContext();
-		mTopic = (Topic)initialContext.lookup(Chat.TOPIC);
+		mTopic = (Topic)initialContext.lookup(Appdata.TOPIC);
 		TopicConnectionFactory topicConnectionFactory = (TopicConnectionFactory)
 				initialContext.lookup("ConnectionFactory");
 		mTopicConnection =
 				topicConnectionFactory.createTopicConnection();
 		System.out.println("Ready for chat");
 		chat.subscribe(mTopicConnection, mTopic, chat);
-		chat.publish(mTopicConnection, mTopic, username);
+		chat.publish(mTopicConnection, mTopic, Appdata.username);
 	}
 
 	public void subscribe(TopicConnection topicConnection, Topic topic, Chat chat)
@@ -98,19 +85,22 @@ public class Chat extends Application implements javax.jms.MessageListener
 		BufferedReader reader = new java.io.BufferedReader
 				(new InputStreamReader(System.in));
 
-		System.out.println(ANSI_YELLOW + "    " + username + " joined the chat!" + ANSI_RESET);
-		sendMessage(ANSI_YELLOW + "    " + username + " joined the chat!" + ANSI_RESET
+		System.out.println(Appdata.ANSI_YELLOW + "    " + username + " joined the chat!" + Appdata.ANSI_RESET);
+		sendMessage(Appdata.ANSI_YELLOW + "    " + username + " joined the chat!" + Appdata.ANSI_RESET
 				,publishSession,topicPublisher);
 		
 		while (true) {
 			String messageToSend = reader.readLine();
-			if (messageToSend.equals("exit")) {
-				System.out.println(ANSI_RED + "    " + username + " left the chat!" + ANSI_RESET);
-				sendMessage(ANSI_RED + "    " + username + " left the chat!" + ANSI_RESET
+			if (messageToSend.equals("exit"))
+			{
+				System.out.println(Appdata.ANSI_RED + "    " + username + " left the chat!" + Appdata.ANSI_RESET);
+				sendMessage(Appdata.ANSI_RED + "    " + username + " left the chat!" + Appdata.ANSI_RESET
 						,publishSession,topicPublisher);
 				topicConnection.close();
 				System.exit(0);
-			} else {
+			}
+			else
+			{
 				sendMessage("     " + username + ":  " + messageToSend
 						,publishSession,topicPublisher);
 			}
@@ -178,11 +168,13 @@ public class Chat extends Application implements javax.jms.MessageListener
 					
 					@Override
 					protected Void call() throws Exception {
-						try {
-							System.out.println("HEJ");
+						try
+						{
+							System.out.println("initChat");
 							initChat();
-						} catch (JMSException | NamingException | IOException e) {
-							// TODO Auto-generated catch block
+						}
+						catch (JMSException | NamingException | IOException e)
+						{
 							e.printStackTrace();
 						}
 						return null;
@@ -194,9 +186,12 @@ public class Chat extends Application implements javax.jms.MessageListener
 		
 		sendButton.setOnAction(e -> {
 				String message = messageArea.getText();
-				try {
+				try
+				{
 					publish(mTopicConnection, mTopic, message);
-				} catch (JMSException | IOException e1) {
+				}
+				catch (JMSException | IOException e1)
+				{
 					e1.printStackTrace();
 				}
 			});
