@@ -4,6 +4,7 @@ import java.io.InputStreamReader;
 import java.util.Properties;
 
 import javafx.application.Application;
+import javafx.concurrent.Service;
 import javafx.concurrent.Task;
 import javafx.scene.Scene;
 import javafx.scene.control.Button;
@@ -48,6 +49,8 @@ public class Chat extends Application implements javax.jms.MessageListener
 	public static final String ANSI_CYAN = "\u001B[36m";
 	public static final String ANSI_WHITE = "\u001B[37m";
 	
+	private Service<Void> backgroundTread;
+	
 	static Topic mTopic;
 	static TopicConnection mTopicConnection;
 
@@ -56,7 +59,7 @@ public class Chat extends Application implements javax.jms.MessageListener
 	{
 		launch(args);
 		username = args[0];
-		initChat(); // TODO add a Thread to run this while the GUI is active.
+		initChat();
 	}
 	
 	private static void initChat()
@@ -158,10 +161,36 @@ public class Chat extends Application implements javax.jms.MessageListener
 		
 		//Label label = new Label("Send message");
 		sendButton = new Button("Send");
-		TextArea messageArea = new TextArea("Your message..");
+		TextArea messageArea = new TextArea();
+		messageArea.setPromptText("Your message..");
 		
 		TextArea chatArea = new TextArea();
+		chatArea.setEditable(false);
 		VBox.setVgrow(chatArea, Priority.ALWAYS);
+		
+		// Start chat connection
+		backgroundTread = new Service<Void>()
+		{
+
+			@Override
+			protected Task<Void> createTask() {
+				return new Task<Void>() {
+					
+					@Override
+					protected Void call() throws Exception {
+						try {
+							System.out.println("HEJ");
+							initChat();
+						} catch (JMSException | NamingException | IOException e) {
+							// TODO Auto-generated catch block
+							e.printStackTrace();
+						}
+						return null;
+					}
+				};
+			}
+			
+		};
 		
 		sendButton.setOnAction(e -> {
 				String message = messageArea.getText();
@@ -171,6 +200,7 @@ public class Chat extends Application implements javax.jms.MessageListener
 					e1.printStackTrace();
 				}
 			});
+		
 		
 		
 		AnchorPane bottomRow = new AnchorPane();
@@ -183,6 +213,8 @@ public class Chat extends Application implements javax.jms.MessageListener
 		
 		window.setScene(scene);
 		window.show();
+		
+		System.out.println("Window setup done.");
 	}
 
 }
